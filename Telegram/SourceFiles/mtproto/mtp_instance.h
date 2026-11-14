@@ -28,6 +28,11 @@ using AuthKeyPtr = std::shared_ptr<AuthKey>;
 using AuthKeysList = std::vector<AuthKeyPtr>;
 enum class Environment : uchar;
 
+struct FloodWait {
+	ShiftedDcId shiftedDcId = 0;
+	int seconds = 0;
+};
+
 class Instance : public QObject {
 	Q_OBJECT
 
@@ -142,6 +147,7 @@ public:
 
 	[[nodiscard]] auto nonPremiumDelayedRequests() const
 		-> rpl::producer<mtpRequestId>;
+	[[nodiscard]] rpl::producer<FloodWait> floodWaits() const;
 	[[nodiscard]] rpl::producer<> frozenErrorReceived() const;
 
 	void syncHttpUnixtime();

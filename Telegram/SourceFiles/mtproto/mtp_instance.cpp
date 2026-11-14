@@ -101,6 +101,7 @@ public:
 
 	[[nodiscard]] auto nonPremiumDelayedRequests() const
 	-> rpl::producer<mtpRequestId>;
+	[[nodiscard]] rpl::producer<FloodWait> floodWaits() const;
 	[[nodiscard]] rpl::producer<> frozenErrorReceived() const;
 
 	void restart();
@@ -288,6 +289,7 @@ private:
 	Fn<void(ShiftedDcId shiftedDcId)> _sessionResetHandler;
 
 	rpl::event_stream<mtpRequestId> _nonPremiumDelayedRequests;
+	rpl::event_stream<FloodWait> _floodWaits;
 	rpl::event_stream<> _frozenErrorReceived;
 
 	base::Timer _checkDelayedTimer;
@@ -563,6 +565,10 @@ rpl::producer<ShiftedDcId> Instance::Private::restartsByTimeout() const {
 auto Instance::Private::nonPremiumDelayedRequests() const
 -> rpl::producer<mtpRequestId> {
 	return _nonPremiumDelayedRequests.events();
+}
+
+rpl::producer<FloodWait> Instance::Private::floodWaits() const {
+	return _floodWaits.events();
 }
 
 rpl::producer<> Instance::Private::frozenErrorReceived() const {
@@ -1547,6 +1553,14 @@ bool Instance::Private::onErrorDefault(
 		if (nonPremiumDelay) {
 			_nonPremiumDelayedRequests.fire_copy(requestId);
 		}
+		if (m1.hasMatch() || m2.hasMatch()) {
+			if (const auto shiftedDcId = queryRequestByDc(requestId)) {
+				_floodWaits.fire({
+					.shiftedDcId = std::abs(*shiftedDcId),
+					.seconds = secs,
+				});
+			}
+		}
 
 		return true;
 	} else if ((code == 401 && type != u"AUTH_KEY_PERM_EMPTY"_q)
@@ -1941,6 +1955,10 @@ rpl::producer<ShiftedDcId> Instance::restartsByTimeout() const {
 
 rpl::producer<mtpRequestId> Instance::nonPremiumDelayedRequests() const {
 	return _private->nonPremiumDelayedRequests();
+}
+
+rpl::producer<FloodWait> Instance::floodWaits() const {
+	return _private->floodWaits();
 }
 
 rpl::producer<> Instance::frozenErrorReceived() const {

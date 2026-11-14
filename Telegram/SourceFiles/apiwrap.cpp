@@ -2964,6 +2964,21 @@ void ApiWrap::refreshFileReference(
 						1,
 						MTP_inputMessageID(MTP_int(item->id)))));
 			}
+		} else if (const auto peer = _session->data().peerLoaded(data.peer)) {
+			if (!IsServerMsgId(data.msg)) {
+				fail();
+			} else if (const auto channel = peer->asChannel()) {
+				request(MTPchannels_GetMessages(
+					channel->inputChannel(),
+					MTP_vector<MTPInputMessage>(
+						1,
+						MTP_inputMessageID(MTP_int(data.msg.bare)))));
+			} else {
+				request(MTPmessages_GetMessages(
+					MTP_vector<MTPInputMessage>(
+						1,
+						MTP_inputMessageID(MTP_int(data.msg.bare)))));
+			}
 		} else {
 			fail();
 		}

@@ -1946,6 +1946,7 @@ void Filler::fillHistoryActions() {
 	addViewDiscussion();
 	addDirectMessages();
 	addExportChat();
+	AyuUi::AddChatMediaDownloadAction(_peer, _thread, _controller, _addAction);
 	addTranslate();
 	addReport();
 	addClearHistory();
@@ -1991,6 +1992,7 @@ void Filler::fillRepliesActions() {
 		addInfo();
 		AyuUi::AddJumpToBeginningAction(_peer, _thread, _controller, _addAction);
 		addManageTopic();
+		AyuUi::AddChatMediaDownloadAction(_peer, _thread, _controller, _addAction);
 	}
 	addBoostChat();
 	addCreatePoll();

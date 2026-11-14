@@ -16,6 +16,8 @@
 #include "ayu/features/filters/filters_controller.h"
 #include "ayu/features/forward/ayu_forward.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
+#include "ayu/features/media_download/media_download.h"
+#include "ayu/ui/boxes/media_download_box.h"
 #include "ayu/ui/context_menu/menu_item_subtext.h"
 #include "ayu/ui/message_history/history_section.h"
 #include "ayu/ui/settings/filters/edit_filter.h"
@@ -484,6 +486,29 @@ void AddDeleteOwnMessagesAction(PeerData *peerData,
 		tr::ayu_DeleteOwnMessages(tr::now),
 		DeleteMyMessagesHandler(sessionController, peerData),
 		&st::menuIconTTL);
+}
+
+void AddChatMediaDownloadAction(PeerData *peerData,
+								Data::Thread *thread,
+								not_null<Window::SessionController*> sessionController,
+								const Window::PeerMenuCallback &addCallback) {
+	if (!peerData || (peerData->isUser() && peerData->asUser()->isInaccessible())) {
+		return;
+	}
+	const auto topic = thread ? thread->asTopic() : nullptr;
+	if (topic && topic->creating()) {
+		return;
+	}
+	const auto peer = not_null<PeerData*>(peerData);
+	const auto topicRootId = topic ? topic->rootId() : MsgId();
+	const auto exists = AyuMediaDownload::Manager::Instance(
+		&sessionController->session())->find(peer->id, topicRootId);
+	addCallback(
+		(exists
+			? tr::ayu_ChatMediaDownloadShow(tr::now)
+			: tr::ayu_ChatMediaDownload(tr::now)),
+		[=] { ShowChatMediaDownload(sessionController, peer, topicRootId); },
+		&st::menuIconDownload);
 }
 
 void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {

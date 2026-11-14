@@ -185,6 +185,8 @@ set(ayugram_files
         ayu/ui/boxes/font_selector.h
         ayu/ui/boxes/import_filters_box.cpp
         ayu/ui/boxes/import_filters_box.h
+        ayu/ui/boxes/media_download_box.cpp
+        ayu/ui/boxes/media_download_box.h
         ayu/ui/boxes/theme_selector_box.cpp
         ayu/ui/boxes/theme_selector_box.h
         ayu/ui/boxes/message_shot_box.cpp
@@ -229,6 +231,8 @@ set(ayugram_files
         ayu/features/forward/ayu_forward_rich.h
         ayu/features/forward/ayu_sync.cpp
         ayu/features/forward/ayu_sync.h
+        ayu/features/media_download/media_download.cpp
+        ayu/features/media_download/media_download.h
         ayu/features/translator/ayu_translator.cpp
         ayu/features/translator/ayu_translator.h
         ayu/features/translator/ayu_translate_provider.cpp
