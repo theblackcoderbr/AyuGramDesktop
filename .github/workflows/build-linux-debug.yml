@@ -1,0 +1,115 @@
+name: Linux Debug build
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "Build environment image"
+        required: false
+        default: "ghcr.io/telegramdesktop/tdesktop/centos_env:latest"
+      upload_binary:
+        description: "Upload the built Telegram binary"
+        type: boolean
+        required: false
+        default: false
+  push:
+    branches:
+      - "feat/**"
+
+concurrency:
+  group: linux-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Compile (Debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      IMAGE: ${{ inputs.image || 'ghcr.io/telegramdesktop/tdesktop/centos_env:latest' }}
+
+    steps:
+      - name: Free disk space
+        shell: bash
+        run: |
+          echo "CCACHE_HOST_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost \
+            /usr/local/.ghcup /opt/microsoft /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_HOST_DIR }}
+          key: ccache-linux-debug-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-linux-debug-${{ github.ref_name }}-
+            ccache-linux-debug-
+
+      - name: Pull build environment
+        shell: bash
+        run: |
+          mkdir -p "$CCACHE_HOST_DIR"
+          docker pull "$IMAGE"
+
+      - name: Build
+        shell: bash
+        run: |
+          docker run --rm \
+            -u "$(id -u):$(id -g)" \
+            -v "$PWD:/usr/src/tdesktop" \
+            -v "$CCACHE_HOST_DIR:/var/cache/ccache" \
+            -e CONFIG=Debug \
+            -e KEEP_GOING=1 \
+            -e CCACHE_MAXSIZE=5G \
+            "$IMAGE" \
+            /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
+            -D TDESKTOP_API_ID=2040 \
+            -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
+            2>&1 | tee build.log
+
+      - name: Summarize errors
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo "## Compilation errors"
+            echo '```'
+            grep -E "error:|Error [0-9]+|undefined reference|CMake Error" build.log \
+              | head -n 200
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_HOST_DIR }}
+          key: ccache-linux-debug-${{ github.ref_name }}-${{ github.sha }}
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 7
+
+      - name: Upload binary
+        if: success() && inputs.upload_binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Telegram-debug
+          path: out/Debug/Telegram
+          retention-days: 3
