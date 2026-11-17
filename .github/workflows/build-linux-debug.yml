@@ -120,7 +120,9 @@ jobs:
       - name: Restore libraries cache
         uses: actions/cache/restore@v6
         with:
-          path: ${{ runner.temp }}/.buildx-cache
+          path: |
+            ${{ runner.temp }}/.buildx-cache
+            ${{ runner.temp }}/.mount-cache
           key: ${{ runner.os }}-libs-${{ hashFiles('Telegram/build/docker/centos_env/**') }}
           fail-on-cache-miss: true
 
@@ -166,6 +168,10 @@ jobs:
         if: failure()
         shell: bash
         run: |
+          if [ ! -f build.log ]; then
+            echo "The build step did not run; see the earlier failed step."
+            exit 0
+          fi
           errors=$(grep -E -A8 "CMake Error|\[ERROR\]" build.log | head -n 80 || true)
           errors+=$'\n'$(grep -E "error:|undefined reference|Error [0-9]+" build.log \
             | head -n 120 || true)
